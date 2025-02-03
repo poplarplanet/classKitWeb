@@ -64,53 +64,66 @@ app.use(express.json());
 
 const XLSX_FILE_PATH = path.join(__dirname, "students.xlsx");
 
-// ✅ Google Drive에서 최신 `students.xlsx` 다운로드
+// ✅ Google Drive 파일 정보
 const GOOGLE_DRIVE_FILE_ID = "1QgAymweqcE-QqVQyoDBlrVWL2N3p-kGS"; // ✅ Google Drive 파일 ID 수정 필요
 const GOOGLE_DRIVE_DOWNLOAD_URL = `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`;
+const GOOGLE_DRIVE_METADATA_URL = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?fields=modifiedTime,size&key=YOUR_GOOGLE_API_KEY`; // 🔹 Google Drive API 키 필요
 
-// ✅ 파일이 없거나 오래된 경우에만 다운로드하도록 변경
-async function downloadLatestExcel(forceUpdate = false) {
+let lastModifiedTime = null; // 🔹 최신 수정 시간 저장
+let lastFileSize = null; // 🔹 파일 크기 저장
+
+// ✅ Google Drive 파일 변경 여부 확인 및 다운로드
+async function checkAndUpdateExcel() {
     try {
-        // 📌 파일이 존재하고, 강제 업데이트가 아닐 경우 다운로드 안 함
-        if (!forceUpdate && fs.existsSync(XLSX_FILE_PATH)) {
-            console.log("✅ 기존 students.xlsx 파일이 존재하므로 다운로드하지 않음.");
-            return;
+        console.log("🔍 Google Drive에서 파일 변경 여부 확인 중...");
+
+        // 🔹 Google Drive의 파일 메타데이터 가져오기 (수정 시간 & 크기 비교)
+        const metadataResponse = await axios.get(GOOGLE_DRIVE_METADATA_URL);
+        const { modifiedTime, size } = metadataResponse.data;
+
+        // 🔹 파일이 처음 다운로드되었거나, 변경되었는지 확인
+        if (!lastModifiedTime || modifiedTime !== lastModifiedTime || size !== lastFileSize) {
+            console.log("📢 파일이 변경되었거나 새 파일이므로 다운로드 중...");
+
+            const response = await axios({
+                url: GOOGLE_DRIVE_DOWNLOAD_URL,
+                method: "GET",
+                responseType: "arraybuffer",
+            });
+
+            // ✅ 기존 파일 삭제 후 새로운 파일 저장
+            if (fs.existsSync(XLSX_FILE_PATH)) {
+                fs.unlinkSync(XLSX_FILE_PATH);
+            }
+            fs.writeFileSync(XLSX_FILE_PATH, response.data);
+            console.log("✅ 최신 XLSX 파일 다운로드 완료.");
+
+            // 🔹 파일 수정 시간 및 크기 업데이트
+            lastModifiedTime = modifiedTime;
+            lastFileSize = size;
+        } else {
+            console.log("✅ 변경된 내용이 없으므로 기존 파일 유지.");
         }
-
-        console.log("📢 Google Drive에서 최신 XLSX 파일 다운로드 중...");
-
-        const response = await axios({
-            url: GOOGLE_DRIVE_DOWNLOAD_URL,
-            method: "GET",
-            responseType: "arraybuffer",
-        });
-
-        // ✅ 기존 파일 삭제 후 새로운 파일 저장
-        if (fs.existsSync(XLSX_FILE_PATH)) {
-            fs.unlinkSync(XLSX_FILE_PATH);
-        }
-        fs.writeFileSync(XLSX_FILE_PATH, response.data);
-        console.log("✅ 최신 XLSX 파일 다운로드 완료.");
     } catch (error) {
-        console.error("❌ XLSX 파일 다운로드 오류 발생:", error);
+        console.error("❌ 파일 변경 확인 또는 다운로드 실패:", error);
     }
 }
 
-// ✅ 서버 시작 시 파일이 없으면 다운로드
-downloadLatestExcel();
+// ✅ 서버 시작 시 최신 파일 확인 및 다운로드
+checkAndUpdateExcel();
 
-// ✅ 1시간마다 최신 파일 업데이트 확인
+// ✅ 🔹 1분마다 최신 파일 변경 여부 확인 (테스트용)
 setInterval(async () => {
-    console.log("🔄 1시간마다 최신 XLSX 데이터 업데이트 확인 중...");
-    await downloadLatestExcel(true);
-}, 60 * 60 * 1000); // 1시간마다 실행 (60 * 60 * 1000 ms)
+    console.log("🔄 1분마다 최신 XLSX 데이터 변경 확인 중...");
+    await checkAndUpdateExcel();
+}, 60 * 1000); // 1분마다 실행 (60 * 1000ms)
 
 // ✅ Excel 파일을 JSON으로 변환하는 함수
 async function readExcelFile() {
     try {
         if (!fs.existsSync(XLSX_FILE_PATH)) {
-            console.error("❌ Excel 파일이 존재하지 않습니다.");
-            return [];
+            console.error("❌ Excel 파일이 존재하지 않음. 자동 다운로드 실행.");
+            await checkAndUpdateExcel();
         }
 
         const workbook = new ExcelJS.Workbook();
@@ -132,6 +145,12 @@ async function readExcelFile() {
             students.push(rowData);
         });
 
+        if (students.length === 0) {
+            console.error("❌ Excel 파일이 비어 있음.");
+        } else {
+            console.log(`✅ 학생 데이터 ${students.length}개 로드 완료.`);
+        }
+
         return students;
     } catch (error) {
         console.error("❌ Excel 파일 읽기 실패:", error);
@@ -141,6 +160,7 @@ async function readExcelFile() {
 
 // ✅ API 엔드포인트: 학생 데이터 제공
 app.get("/students", async (req, res) => {
+    console.log("📢 /students 엔드포인트 호출됨.");
     const students = await readExcelFile();
     res.json(students);
 });
