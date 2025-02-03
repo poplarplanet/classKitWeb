@@ -14,12 +14,18 @@ document.addEventListener("DOMContentLoaded", async function () {
     let studentRecords = [];
     let currentIndex = 0;
 
+    // ✅ Render 서버의 URL (기존 localhost 대신 사용)
+    const API_URL = "https://classkitweb.onrender.com/students";
+
     try {
-        const response = await fetch("http://localhost:4000/students");
-        if (!response.ok) throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
+        console.log("📢 서버에 데이터 요청 중:", API_URL);
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error(`❌ HTTP 오류! 상태 코드: ${response.status}`);
 
         students = await response.json();
+        console.log("✅ 서버에서 받은 데이터:", students);
 
+        // 수업 이름 선택 필터 채우기
         const classSet = new Set(students.map(s => s["수업 이름"]));
         classSet.forEach(cls => {
             const option = document.createElement("option");
@@ -92,6 +98,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
 
     } catch (error) {
-        console.error("데이터 불러오기 실패:", error);
+        console.error("❌ 데이터 불러오기 실패:", error);
     }
 });
