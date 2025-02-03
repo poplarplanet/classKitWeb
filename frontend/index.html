@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학생 성적 조회</title>
+    <link href='https://fonts.google.com/specimen/IBM+Plex+Sans+KR?lang=ko_Kore' rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>생글방글 학생 정보 조회</h1>
+
+        <!-- 필터 선택 -->
+        <table class="filter-table">
+            <tr>
+                <th>수업 이름</th>
+                <th>담당 선생님</th>
+                <th>학생 이름</th>
+                <th>수업 일자</th>
+            </tr>
+            <tr>
+                <td>
+                    <select id="class-select">
+                        <option value="">선택</option>
+                    </select>
+                </td>
+                <td>
+                    <select id="teacher-select" disabled>
+                        <option value="">선택</option>
+                    </select>
+                </td>
+                <td>
+                    <select id="student-select" disabled>
+                        <option value="">선택</option>
+                    </select>
+                </td>
+                <td>
+                    <button id="prev-date">◀</button>
+                    <span id="selected-date">-</span>
+                    <button id="next-date">▶</button>
+                </td>
+            </tr>
+            <tr>
+                <th>성적 데이터</th>
+                <td id="vocab-test">어휘 테스트: 0/100 </td>
+                <td id="homework-score">과제 평가: 0/100 </td>
+                <td id="class-attitude">수업 태도: 0/100 </td>
+            </tr>
+            <tr>
+                <th>선생님 코멘트</th>
+                <td colspan="3">
+                    <textarea id="teacher-comment" placeholder="학생에 대한 코멘트를 입력해주세요."></textarea>
+                </td>
+            </tr>
+            <tr>
+                <th>문체 설정</th>
+                <td colspan="2">
+                    <select id="style-select">
+                        <option value="스타일1">예진샘 수업 문자 스타일 1</option>
+                        <option value="스타일2">예진샘 수업 문자 스타일 2</option>
+                    </select>
+                </td>
+                <td>
+                    <button id="generate-ai">✨ AI 자동 생성</button>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
