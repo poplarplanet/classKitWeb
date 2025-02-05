@@ -78,6 +78,7 @@ async function readExcelFile() {
                 "어휘 테스트": row.getCell(5).value,
                 "과제 평가": row.getCell(6).value,
                 "수업 태도": row.getCell(7).value,
+                // "선생님 코멘트": row.getCell(8).value
             };
             students.push(rowData);
         });
@@ -98,4 +99,3 @@ app.get("/students", async (req, res) => {
 
 // ✅ 서버 실행 (Render에서 실행)
 app.listen(PORT, () => console.log(`✅ Server running on https://classkitweb.onrender.com`));
-
