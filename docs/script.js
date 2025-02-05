@@ -17,6 +17,34 @@ document.addEventListener("DOMContentLoaded", async function () {
     // ✅ Render 서버의 URL (기존 localhost 대신 사용)
     const API_URL = "https://classkitweb.onrender.com/students";
 
+    const teacherComment = document.getElementById("teacher-comment");
+    const generateAiButton = document.getElementById("generate-ai");
+
+    async function loadTeacherComment() {
+        if (!classSelect.value || !teacherSelect.value || !studentSelect.value) {
+            teacherComment.textContent = "-";
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `http://localhost:4000/comment?className=${classSelect.value}&teacher=${teacherSelect.value}&studentName=${studentSelect.value}`
+            );
+            const data = await response.json();
+            teacherComment.textContent = data.comment;
+        } catch (error) {
+            console.error("❌ 선생님 코멘트 불러오기 실패:", error);
+            teacherComment.textContent = "불러오기 실패";
+        }
+    }
+
+    studentSelect.addEventListener("change", loadTeacherComment);
+
+    // ✅ AI 자동 생성 버튼 클릭 시 "완성" 출력
+    generateAiButton.addEventListener("click", function () {
+        teacherComment.textContent = "완성";
+    });
+
     try {
         console.log("📢 서버에 데이터 요청 중:", API_URL);
         const response = await fetch(API_URL);
