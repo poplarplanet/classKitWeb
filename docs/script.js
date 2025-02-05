@@ -9,51 +9,24 @@ document.addEventListener("DOMContentLoaded", async function () {
     const vocabTest = document.getElementById("vocab-test");
     const homeworkScore = document.getElementById("homework-score");
     const classAttitude = document.getElementById("class-attitude");
+    const teacherComment = document.getElementById("teacher-comment");
+    const generateAiButton = document.getElementById("generate-ai");
 
     let students = [];
     let studentRecords = [];
     let currentIndex = 0;
 
-    // ✅ Render 서버의 URL (기존 localhost 대신 사용)
-    const API_URL = "https://classkitweb.onrender.com/students";
-
-    const teacherComment = document.getElementById("teacher-comment");
-    const generateAiButton = document.getElementById("generate-ai");
-
-    async function loadTeacherComment() {
-        if (!classSelect.value || !teacherSelect.value || !studentSelect.value) {
-            teacherComment.textContent = "-";
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `http://localhost:4000/comment?className=${classSelect.value}&teacher=${teacherSelect.value}&studentName=${studentSelect.value}`
-            );
-            const data = await response.json();
-            teacherComment.textContent = data.comment;
-        } catch (error) {
-            console.error("❌ 선생님 코멘트 불러오기 실패:", error);
-            teacherComment.textContent = "불러오기 실패";
-        }
-    }
-
-    studentSelect.addEventListener("change", loadTeacherComment);
-
-    // ✅ AI 자동 생성 버튼 클릭 시 "완성" 출력
-    generateAiButton.addEventListener("click", function () {
-        teacherComment.textContent = "완성";
-    });
+    const API_URL = "http://localhost:4000";
 
     try {
-        console.log("📢 서버에 데이터 요청 중:", API_URL);
-        const response = await fetch(API_URL);
+        console.log("📢 서버에서 학생 데이터를 불러오는 중...");
+        const response = await fetch(`${API_URL}/students`);
         if (!response.ok) throw new Error(`❌ HTTP 오류! 상태 코드: ${response.status}`);
 
         students = await response.json();
-        console.log("✅ 서버에서 받은 데이터:", students);
+        console.log("✅ 서버에서 받은 학생 데이터:", students);
 
-         // ✅ 수업 이름 드롭다운 목록 추가
+        // ✅ 수업 이름 드롭다운 목록 추가
         const classSet = new Set(students.map(s => s["수업 이름"]));
         classSet.forEach(cls => {
             const option = document.createElement("option");
@@ -61,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             option.textContent = cls;
             classSelect.appendChild(option);
         });
+
         // ✅ 수업 이름 선택 시 -> 담당 선생님 목록 업데이트
         classSelect.addEventListener("change", function () {
             teacherSelect.innerHTML = '<option value="">선택</option>';
@@ -80,6 +54,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 teacherSelect.appendChild(option);
             });
         });
+
         // ✅ 담당 선생님 선택 시 -> 학생 목록 업데이트
         teacherSelect.addEventListener("change", function () {
             studentSelect.innerHTML = '<option value="">선택</option>';
@@ -98,8 +73,14 @@ document.addEventListener("DOMContentLoaded", async function () {
                 studentSelect.appendChild(option);
             });
         });
+
         // ✅ 학생 선택 시 -> 해당 학생의 데이터 불러오기
-        studentSelect.addEventListener("change", function () {
+        studentSelect.addEventListener("change", async function () {
+            if (!classSelect.value || !teacherSelect.value || !studentSelect.value) {
+                teacherComment.textContent = "-";
+                return;
+            }
+
             studentRecords = students.filter(s =>
                 s["수업 이름"] === classSelect.value &&
                 s["담당 선생님"] === teacherSelect.value &&
@@ -109,10 +90,25 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (studentRecords.length > 0) {
                 currentIndex = 0;
                 updateStudentInfo();
+                await loadTeacherComment();
             }
         });
 
-        // ✅ 성적 데이터 업데이트 함수
+        // ✅ 특정 학생의 코멘트를 서버에서 불러오는 함수
+        async function loadTeacherComment() {
+            try {
+                const response = await fetch(
+                    `${API_URL}/comment?className=${classSelect.value}&teacher=${teacherSelect.value}&studentName=${studentSelect.value}`
+                );
+                const data = await response.json();
+                teacherComment.textContent = data.comment;
+            } catch (error) {
+                console.error("❌ 선생님 코멘트 불러오기 실패:", error);
+                teacherComment.textContent = "불러오기 실패";
+            }
+        }
+
+        // ✅ 학생 정보 업데이트 함수
         function updateStudentInfo() {
             if (studentRecords.length === 0) return;
 
@@ -125,7 +121,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             prevDateBtn.disabled = (currentIndex === 0);
             nextDateBtn.disabled = (currentIndex === studentRecords.length - 1);
         }
-        // ✅ 수업 일자 이전 버튼
+
+        // ✅ 이전 수업 일자로 이동
         prevDateBtn.addEventListener("click", function () {
             if (currentIndex > 0) {
                 currentIndex--;
@@ -133,7 +130,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
         });
 
-        // ✅ 수업 일자 다음 버튼
+        // ✅ 다음 수업 일자로 이동
         nextDateBtn.addEventListener("click", function () {
             if (currentIndex < studentRecords.length - 1) {
                 currentIndex++;
@@ -141,11 +138,31 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
         });
 
+        // ✅ AI 자동 생성 버튼 클릭 시 "완성" 출력
+        generateAiButton.addEventListener("click", async function () {
+            try {
+                const response = await fetch(`${API_URL}/generate-ai`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        className: classSelect.value,
+                        teacher: teacherSelect.value,
+                        studentName: studentSelect.value,
+                    }),
+                });
+
+                const data = await response.json();
+                teacherComment.textContent = data.message; // "완성"이 표시됨
+            } catch (error) {
+                console.error("❌ AI 자동 생성 요청 실패:", error);
+                teacherComment.textContent = "생성 실패";
+            }
+        });
+
     } catch (error) {
         console.error("❌ 데이터 불러오기 실패:", error);
     }
 });
-
 
 // document.addEventListener("DOMContentLoaded", async function () {
 //     const classSelect = document.getElementById("class-select");

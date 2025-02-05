@@ -112,7 +112,7 @@ app.use(express.json());
 
 const XLSX_FILE_PATH = path.join(__dirname, "students.xlsx");
 
-// 📌 학생 데이터 불러오기
+// ✅ `students.xlsx` 데이터를 읽어오는 함수
 async function readExcelFile() {
     try {
         const workbook = new ExcelJS.Workbook();
@@ -121,7 +121,7 @@ async function readExcelFile() {
 
         let students = [];
         worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return; // 헤더 제외
+            if (rowNumber === 1) return; // 첫 번째 행(헤더) 제외
             let rowData = {
                 "수업 이름": row.getCell(1).value,
                 "담당 선생님": row.getCell(2).value,
@@ -130,7 +130,7 @@ async function readExcelFile() {
                 "어휘 테스트": row.getCell(5).value,
                 "과제 평가": row.getCell(6).value,
                 "수업 태도": row.getCell(7).value,
-                "선생님 코멘트": row.getCell(8).value
+                "선생님 코멘트": row.getCell(8).value || "코멘트 없음"
             };
             students.push(rowData);
         });
@@ -142,9 +142,20 @@ async function readExcelFile() {
     }
 }
 
-// 📌 특정 학생의 코멘트 가져오는 API
+// ✅ 전체 학생 목록을 불러오는 API
+app.get("/students", async (req, res) => {
+    console.log("📢 학생 목록 요청됨.");
+    const students = await readExcelFile();
+    res.json(students);
+});
+
+// ✅ 특정 학생의 선생님 코멘트를 반환하는 API
 app.get("/comment", async (req, res) => {
     const { className, teacher, studentName } = req.query;
+
+    if (!className || !teacher || !studentName) {
+        return res.status(400).json({ error: "잘못된 요청. 모든 값을 입력하세요." });
+    }
 
     const students = await readExcelFile();
     const student = students.find(s =>
@@ -154,13 +165,26 @@ app.get("/comment", async (req, res) => {
     );
 
     if (student) {
-        res.json({ comment: student["선생님 코멘트"] || "코멘트 없음" });
+        res.json({ comment: student["선생님 코멘트"] });
     } else {
         res.status(404).json({ error: "학생을 찾을 수 없음" });
     }
 });
 
-// 📌 서버 실행
+// ✅ AI 자동 생성 요청을 처리하는 API (현재는 "완성" 반환)
+app.post("/generate-ai", async (req, res) => {
+    const { className, teacher, studentName } = req.body;
+
+    if (!className || !teacher || !studentName) {
+        return res.status(400).json({ error: "잘못된 요청. 모든 값을 입력하세요." });
+    }
+
+    console.log(`📢 AI 생성 요청: ${className} - ${teacher} - ${studentName}`);
+
+    res.json({ message: "완성" });
+});
+
+// ✅ 서버 실행
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
 });
