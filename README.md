@@ -26,4 +26,4 @@
 ## 🚀 클래스킷과 함께하세요!
 **"더 간편한 수업 관리, 더 스마트한 학습 환경!"**  
 
-🔗 [클래스킷 테스트 페이지 바로가기]([https://github.com/poplarplanet](https://poplarplanet.github.io/classKitWeb/))
+🔗 [클래스킷 테스트 페이지 바로가기](https://poplarplanet.github.io/classKitWeb/)
